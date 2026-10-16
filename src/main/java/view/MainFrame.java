@@ -67,7 +67,7 @@ public class MainFrame extends JFrame {
         onglets.setBackground(Theme.FOND);
         onglets.addTab("Mon frigo", new FrigoPanel());
         onglets.addTab("Courses", new CoursesPanel());
-        onglets.addTab("Recettes", new PanneauEnConstruction("Recettes", "Cet écran sera ajouté à l'étape 8."));
+        onglets.addTab("Recettes", new RecettesPanel());
 
         onglets.addChangeListener(e -> {
             Component c = onglets.getSelectedComponent();
