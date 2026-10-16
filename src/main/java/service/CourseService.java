@@ -72,9 +72,14 @@ public class CourseService {
             if (courseDAO.existeNonAchete(s.getNom())) {
                 continue;
             }
-            String origine = "Périmé".equals(s.getRaison())
-                    ? "Auto : périmé"
-                    : "Auto : épuisé";
+            String origine;
+            if ("Recette".equals(s.getRaison())) {
+                origine = "Auto : recette";
+            } else if ("Périmé".equals(s.getRaison())) {
+                origine = "Auto : périmé";
+            } else {
+                origine = "Auto : épuisé";
+            }
             courseDAO.insert(new ArticleCourse(s.getNom(), s.getQuantite(), origine));
             ajoutes++;
         }
