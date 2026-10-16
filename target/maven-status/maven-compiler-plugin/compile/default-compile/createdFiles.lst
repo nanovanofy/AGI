@@ -1,0 +1,14 @@
+model/Suggestion.class
+view/PanneauEnConstruction.class
+service/CourseService.class
+view/Rafraichissable.class
+view/MainFrame.class
+view/SuggestionsDialog$1.class
+model/ArticleCourse.class
+util/DBConnection.class
+view/CoursesPanel$1.class
+view/SuggestionsDialog.class
+view/FrigoPanel$RenduLigne.class
+view/CoursesPanel.class
+dao/CourseDAO.class
+util/TestConnexion.class
