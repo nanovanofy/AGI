@@ -35,6 +35,22 @@ public class RecetteDAO {
     }
 
     /**
+     * Insère une nouvelle recette.
+     */
+    public void insert(Recette r) throws SQLException {
+        String sql = "INSERT INTO recette (titre, ingredients, instructions, temps_minutes) "
+                + "VALUES (?, ?, ?, ?)";
+        try (Connection connexion = DBConnection.getConnection();
+             PreparedStatement ps = connexion.prepareStatement(sql)) {
+            ps.setString(1, r.getTitre());
+            ps.setString(2, r.getIngredients());
+            ps.setString(3, r.getInstructions());
+            ps.setInt(4, r.getTempsMinutes());
+            ps.executeUpdate();
+        }
+    }
+
+    /**
      * Construit une Recette à partir de la ligne courante du ResultSet.
      */
     private Recette lireRecette(ResultSet rs) throws SQLException {

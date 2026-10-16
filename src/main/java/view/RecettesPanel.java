@@ -30,7 +30,9 @@ import javax.swing.border.Border;
 import javax.swing.table.DefaultTableModel;
 
 import dao.ProduitDAO;
+import dao.RecetteDAO;
 import model.Produit;
+import model.Recette;
 import model.RecetteSuggestion;
 import model.RecetteSuggestion.Ingredient;
 import model.Suggestion;
@@ -62,9 +64,12 @@ public class RecettesPanel extends JPanel implements Rafraichissable {
     private final RecetteService service = new RecetteService();
     private final CourseService courseService = new CourseService();
     private final ProduitDAO produitDAO = new ProduitDAO();
+    private final RecetteDAO recetteDAO = new RecetteDAO();
 
     private final JCheckBox caseRealisables =
             new JCheckBox("Seulement les recettes réalisables");
+
+    private final JButton boutonNouvelle = Ui.boutonPlein("Nouvelle recette");
 
     private final DefaultListModel<RecetteSuggestion> modeleListe = new DefaultListModel<>();
     private final JList<RecetteSuggestion> liste = new JList<>(modeleListe);
@@ -103,6 +108,7 @@ public class RecettesPanel extends JPanel implements Rafraichissable {
 
         // Écouteurs
         caseRealisables.addActionListener(e -> charger());
+        boutonNouvelle.addActionListener(e -> nouvelleRecette());
         boutonManquants.addActionListener(e -> ajouterManquants());
         boutonCuisine.addActionListener(e -> cuisiner());
         liste.addListSelectionListener(e -> {
@@ -135,10 +141,15 @@ public class RecettesPanel extends JPanel implements Rafraichissable {
         caseRealisables.setBackground(Theme.FOND);
         caseRealisables.setSelected(false);
 
+        JPanel filtres = new JPanel(new BorderLayout(0, 8));
+        filtres.setBackground(Theme.FOND);
+        filtres.add(caseRealisables, BorderLayout.NORTH);
+        filtres.add(boutonNouvelle, BorderLayout.SOUTH);
+
         JPanel haut = new JPanel(new BorderLayout(0, 8));
         haut.setBackground(Theme.FOND);
         haut.add(titre, BorderLayout.NORTH);
-        haut.add(caseRealisables, BorderLayout.SOUTH);
+        haut.add(filtres, BorderLayout.SOUTH);
         gauche.add(haut, BorderLayout.NORTH);
 
         liste.setFont(Theme.POLICE);
@@ -263,6 +274,42 @@ public class RecettesPanel extends JPanel implements Rafraichissable {
             afficherDetail(suggestions.get(index));
         } catch (SQLException e) {
             afficherErreur(e);
+        }
+    }
+
+    /**
+     * Ouvre le formulaire de création d'une recette, l'enregistre
+     * puis recharge la liste en sélectionnant la recette ajoutée.
+     */
+    private void nouvelleRecette() {
+        RecetteDialog dialog = new RecetteDialog(
+                SwingUtilities.getWindowAncestor(this));
+        dialog.setVisible(true);
+
+        Recette nouvelle = dialog.getResultat();
+        if (nouvelle == null) {
+            return;
+        }
+
+        try {
+            recetteDAO.insert(nouvelle);
+            charger();
+            selectionnerParTitre(nouvelle.getTitre());
+        } catch (SQLException e) {
+            afficherErreur(e);
+        }
+    }
+
+    /**
+     * Sélectionne dans la liste la recette ayant ce titre, si elle est visible.
+     */
+    private void selectionnerParTitre(String titre) {
+        for (int i = 0; i < suggestions.size(); i++) {
+            if (suggestions.get(i).getTitre().equals(titre)) {
+                liste.setSelectedIndex(i);
+                liste.ensureIndexIsVisible(i);
+                return;
+            }
         }
     }
 
