@@ -68,10 +68,32 @@ public class RecetteService {
     }
 
     /**
-     * Détermine l'état d'un ingrédient : « À consommer vite », « En stock » ou « Manquant ».
-     * Si plusieurs produits correspondent, on garde le plus urgent des produits non épuisés.
+     * Renvoie les produits du frigo utilisés par une recette :
+     * les produits « en stock » (non épuisés) correspondant à ses ingrédients disponibles.
+     * Un produit n'apparaît qu'une seule fois.
      */
-    private String evaluer(String ingredient, List<Produit> produits) {
+    public List<Produit> produitsUtilises(RecetteSuggestion s) throws SQLException {
+        List<Produit> produits = produitDAO.findAll();
+        List<Produit> resultat = new ArrayList<>();
+
+        for (Ingredient ing : s.getIngredients()) {
+            if (ing.estManquant()) {
+                continue;
+            }
+            Produit p = trouverProduit(ing.getNom(), produits);
+            if (p != null && !contientId(resultat, p.getId())) {
+                resultat.add(p);
+            }
+        }
+        return resultat;
+    }
+
+    /**
+     * Cherche le produit correspondant à un ingrédient : le nom du produit contient
+     * l'ingrédient (insensible à la casse). On ignore les produits épuisés et, si
+     * plusieurs correspondent, on garde celui qui se périme le plus vite.
+     */
+    private Produit trouverProduit(String ingredient, List<Produit> produits) {
         Produit meilleur = null;
 
         for (Produit p : produits) {
@@ -88,6 +110,27 @@ public class RecetteService {
                 meilleur = p;
             }
         }
+        return meilleur;
+    }
+
+    /**
+     * Vrai si la liste contient déjà un produit avec cet identifiant.
+     */
+    private boolean contientId(List<Produit> produits, int id) {
+        for (Produit p : produits) {
+            if (p.getId() == id) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Détermine l'état d'un ingrédient : « À consommer vite », « En stock » ou « Manquant ».
+     * Si plusieurs produits correspondent, on garde le plus urgent des produits non épuisés.
+     */
+    private String evaluer(String ingredient, List<Produit> produits) {
+        Produit meilleur = trouverProduit(ingredient, produits);
 
         if (meilleur == null) {
             return Ingredient.MANQUANT;

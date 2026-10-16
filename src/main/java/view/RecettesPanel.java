@@ -5,6 +5,7 @@ import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -28,6 +29,8 @@ import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
 import javax.swing.table.DefaultTableModel;
 
+import dao.ProduitDAO;
+import model.Produit;
 import model.RecetteSuggestion;
 import model.RecetteSuggestion.Ingredient;
 import model.Suggestion;
@@ -58,6 +61,7 @@ public class RecettesPanel extends JPanel implements Rafraichissable {
 
     private final RecetteService service = new RecetteService();
     private final CourseService courseService = new CourseService();
+    private final ProduitDAO produitDAO = new ProduitDAO();
 
     private final JCheckBox caseRealisables =
             new JCheckBox("Seulement les recettes réalisables");
@@ -79,6 +83,8 @@ public class RecettesPanel extends JPanel implements Rafraichissable {
     private final JTextArea zoneInstructions = new JTextArea();
     private final JButton boutonManquants =
             Ui.boutonPlein("Ajouter les manquants aux courses");
+    private final JButton boutonCuisine =
+            Ui.boutonContour("J'ai cuisiné cette recette");
 
     /** Deux cartes à droite : le détail d'une recette, ou le message « vide ». */
     private final CardLayout cartes = new CardLayout();
@@ -98,6 +104,7 @@ public class RecettesPanel extends JPanel implements Rafraichissable {
         // Écouteurs
         caseRealisables.addActionListener(e -> charger());
         boutonManquants.addActionListener(e -> ajouterManquants());
+        boutonCuisine.addActionListener(e -> cuisiner());
         liste.addListSelectionListener(e -> {
             if (e.getValueIsAdjusting()) {
                 return;
@@ -189,13 +196,19 @@ public class RecettesPanel extends JPanel implements Rafraichissable {
         defilementTexte.setBorder(BORDURE);
         defilementTexte.getViewport().setBackground(Color.WHITE);
 
-        // Le bouton s'active seulement si la recette a des ingrédients manquants
+        // Les boutons s'activent selon la recette sélectionnée
         boutonManquants.setEnabled(false);
+        boutonCuisine.setEnabled(false);
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        actions.setBackground(Color.WHITE);
+        actions.add(boutonCuisine);
+        actions.add(boutonManquants);
 
         JPanel bas = new JPanel(new BorderLayout(0, 8));
         bas.setBackground(Color.WHITE);
         bas.add(defilementTexte, BorderLayout.CENTER);
-        bas.add(boutonManquants, BorderLayout.SOUTH);
+        bas.add(actions, BorderLayout.SOUTH);
         detail.add(bas, BorderLayout.SOUTH);
 
         // Carte 2 : aucune recette
@@ -229,6 +242,7 @@ public class RecettesPanel extends JPanel implements Rafraichissable {
 
             if (suggestions.isEmpty()) {
                 boutonManquants.setEnabled(false);
+                boutonCuisine.setEnabled(false);
                 cartes.show(panneauDroit, "vide");
                 return;
             }
@@ -283,6 +297,9 @@ public class RecettesPanel extends JPanel implements Rafraichissable {
         } else {
             boutonManquants.setText("Ajouter les " + n + " manquants aux courses");
         }
+
+        // Le bouton « J'ai cuisiné » n'est utile que si au moins un ingrédient est disponible
+        boutonCuisine.setEnabled(r.nbDisponibles() > 0);
     }
 
     /**
@@ -318,6 +335,46 @@ public class RecettesPanel extends JPanel implements Rafraichissable {
             JOptionPane.showMessageDialog(this,
                     n + " article(s) ajouté(s) aux courses.",
                     "Information", JOptionPane.INFORMATION_MESSAGE);
+        } catch (SQLException e) {
+            afficherErreur(e);
+        }
+    }
+
+    /**
+     * Ouvre la boîte de dialogue des produits utilisés par la recette sélectionnée,
+     * puis retire du frigo ceux que l'utilisateur a cochés.
+     */
+    private void cuisiner() {
+        RecetteSuggestion r = liste.getSelectedValue();
+        if (r == null) {
+            return;
+        }
+
+        try {
+            List<Produit> utilises = service.produitsUtilises(r);
+            if (utilises.isEmpty()) {
+                return;
+            }
+
+            ConsommationDialog dialog = new ConsommationDialog(
+                    SwingUtilities.getWindowAncestor(this), utilises);
+            dialog.setVisible(true);
+
+            List<Produit> choisis = dialog.getChoisis();
+            if (choisis.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                        "Rien n'a été retiré.",
+                        "Information", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            for (Produit p : choisis) {
+                produitDAO.delete(p.getId());
+            }
+            JOptionPane.showMessageDialog(this,
+                    choisis.size() + " produit(s) retiré(s) du frigo.",
+                    "Information", JOptionPane.INFORMATION_MESSAGE);
+            charger();
         } catch (SQLException e) {
             afficherErreur(e);
         }
